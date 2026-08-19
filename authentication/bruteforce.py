@@ -1,4 +1,5 @@
 import requests
+import sys
 
 from io import BytesIO
 from lxml import etree
@@ -22,9 +23,9 @@ def enumerate_usernames(target, users_list, user_input_name, password_input_name
             for user in users:
                 usernames.append(user.strip())
     except FileNotFoundError:
-        print('The file was not found')
+        sys.exit('The file was not found')
     except Exception as e:
-        print(f'An error occurred: {e}')
+        sys.exit(f'An error occurred: {e}')
 
     params[user_input_name] = 'username'
     params[password_input_name] = 'password'
@@ -77,9 +78,9 @@ def enumerate_password(target, usernames, pwd_list, user_input_name, password_in
             for pwd in pwds:
                 passwords.append(pwd.strip())
     except FileNotFoundError:
-        print('The file was not found')
+        sys.exit('The file was not found')
     except Exception as e:
-        print(f'An error occurred: {e}')
+        sys.exit(f'An error occurred: {e}')
 
     session = requests.Session()
     response = session.get(target, timeout=timeout)
