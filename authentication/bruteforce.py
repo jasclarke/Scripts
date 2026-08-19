@@ -11,9 +11,12 @@ PASSWORD_LIST = 'authentication/wordlists/passwords.txt'
 USER_INPUT_NAME = 'username'
 PASSWORD_INPUT_NAME = 'password'
 SEARCH_TERM = 'Invalid username or password.'
-WORDLIST = 'authentication/wordlists/test.txt'
+WORDLIST = 'authentication/wordlists/test1.txt'
 WORD = 'peter'
-AFTER_EVERY = 4
+AFTER_EVERY = 3
+REPEAT_WORD = 'carlos'
+PLACED_WORD = 'wiener'
+WORD_COUNT = 150
 
 def enumerate_usernames(target, users_list, user_input_name, password_input_name, search_term, timeout=10):
     session = requests.Session()
@@ -146,6 +149,24 @@ def search_tree(content, term):
 
     return tree.xpath(f'.//*[text()=\'{term}\']')
 
+def create_wordlist(repeat_word, placed_word, word_count, wordlist, insert_every=0):
+    words = list()
+    words.append(placed_word + '\n')
+
+    for index in range(1, word_count):
+        if index % insert_every == 0:
+            words.append(placed_word + '\n')
+        else:
+            words.append(repeat_word + '\n')
+        
+    try:
+        with open(wordlist, 'w') as wl:
+            words = wl.writelines(words)
+
+        print(f'The new list was successfully saved to {wordlist} file.')
+    except Exception as e:
+            sys.exit(f'An error occurred: {e}')
+
 def modify_wordlist(wordlist, word, insert_every=0):
     words = list()
     word += '\n'
@@ -181,7 +202,7 @@ def modify_wordlist(wordlist, word, insert_every=0):
             
 
 if __name__ == '__main__':
-    modify_wordlist(WORDLIST, WORD, AFTER_EVERY)
+    create_wordlist(REPEAT_WORD, PLACED_WORD, WORD_COUNT, WORDLIST, AFTER_EVERY)
     #enumerate_usernames(TARGET, USERS_LIST, USER_INPUT_NAME, PASSWORD_INPUT_NAME, SEARCH_TERM, TIMEOUT)
     '''enumerate_password(
         TARGET,
