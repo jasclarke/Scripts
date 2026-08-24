@@ -1,9 +1,9 @@
 
 import sys
 
-WORDLIST = 'authentication/wordlists/passwords_repeat.txt'
+WORDLIST = 'authentication/wordlists/usernames_acc_lock.txt'
 WORD = 'peter'
-AFTER_EVERY = 3
+AFTER_EVERY = 4
 REPEAT_WORD = 'carlos'
 PLACED_WORD = 'wiener'
 WORD_COUNT = 150
@@ -56,8 +56,25 @@ def modify_wordlist(wordlist, word, insert_every=0):
         print(f'The new list was successfully saved to {wordlist} file.')
     except Exception as e:
             sys.exit(f'An error occurred: {e}')
-            
+
+def repeat_word(wordlist, occurrances):
+    words = list()
+    updated_wordlist = list()
+
+    try:
+        with open(wordlist, 'r+') as wl:
+            words = [w.rstrip() for w in wl]
+            updated_wordlist = [word + '\n' for word in words for _ in range(occurrances)]
+
+            wl.seek(0)
+            wl.writelines(updated_wordlist)
+            print(f'Each word was repeated {occurrances} times in the wordlist.')
+    except FileNotFoundError:
+        sys.exit('The file not found')
+    except Exception as e:
+        sys.exit(f'An error occurred: {e}')
 
 if __name__ == '__main__':
     #create_wordlist(REPEAT_WORD, PLACED_WORD, WORD_COUNT, WORDLIST, AFTER_EVERY)
-    modify_wordlist(WORDLIST, WORD, AFTER_EVERY)
+    #modify_wordlist(WORDLIST, WORD, AFTER_EVERY)
+    repeat_word(WORDLIST, AFTER_EVERY)
