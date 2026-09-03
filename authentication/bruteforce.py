@@ -142,7 +142,7 @@ def enumerate_password(target, usernames, pwd_list, user_input_name, password_in
     
     return potential_credentials
 
-def enumerate_mfa_code( target: str, code_input_name: str, cookie_name: str, cookie_value: str, error_msg: str, digits: int = 4, timeout: int = 10) -> int | None:
+def enumerate_mfa_code( target: str, code_input_name: str, cookie_name: str, cookie_value: str, error_msg: str, digits: int = 4, timeout: int = 10) -> str | None:
     session = requests.Session()
     session.cookies.set(cookie_name, cookie_value, domain=urlparse(target).netloc, path='/')
 
