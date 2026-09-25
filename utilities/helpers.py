@@ -1,7 +1,7 @@
-import beautifulsoup
 import requests
 import sys
 
+from bs4 import BeautifulSoup
 from lxml import etree
 from io import BytesIO
 from urllib.parse import urljoin
@@ -61,10 +61,9 @@ def search_tree(content: bytes, term: str) -> bool:
     tree = etree.parse(BytesIO(content), parser=parser)
     return bool(tree.xpath(f".//*[contains(normalize-space(string(.)), '{term}')]"))
 
-def get_element_content(content: bytes, term: str) -> str:
-    parser = etree.HTMLParser()
-    tree = etree.parse(BytesIO(content), parser=parser)
-    tree.xpath(f".//*[contains(normalize-space(string(.)), '{term}')]")
+def get_element_content(content: bytes, css_selector: str) -> str:
+    soup = BeautifulSoup(content, 'html.parser')
+    return soup.select_one(css_selector).get_text(strip=True) if soup.select_one(css_selector) else 'Not found'
 
 def login(target: str, path: str, username_input: str, password_input: str, username: str, password: str, error_msg, timeout=10) -> requests.Session:
     session = requests.Session()
